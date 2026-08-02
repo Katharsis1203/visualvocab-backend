@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: visualvocab-api
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: VISUALVOCAB_UPLOAD_DIRECTORY
+        value: /app/uploads
+      - key: VISUALVOCAB_MAX_UPLOAD_BYTES
+        value: "262144000"
