@@ -14,9 +14,6 @@
                 Inter,
                 ui-sans-serif,
                 system-ui,
-                -apple-system,
-                BlinkMacSystemFont,
-                "Segoe UI",
                 sans-serif;
         }
 
@@ -31,10 +28,6 @@
             margin: 48px auto;
         }
 
-        header {
-            margin-bottom: 28px;
-        }
-
         h1 {
             margin: 0 0 8px;
             font-size: clamp(28px, 5vw, 44px);
@@ -45,22 +38,18 @@
             margin: 0;
         }
 
-        .status {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 18px;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: #1a1d24;
-            color: #d7dbe5;
+        .actions {
+            margin: 22px 0;
         }
 
-        .dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #58c97a;
+        .button {
+            display: inline-flex;
+            padding: 11px 16px;
+            border-radius: 999px;
+            background: #6c83ff;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
         }
 
         .panel {
@@ -73,7 +62,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 880px;
+            min-width: 950px;
         }
 
         th,
@@ -86,11 +75,6 @@
         th {
             color: #a8afbf;
             font-size: 13px;
-            font-weight: 600;
-        }
-
-        td {
-            font-size: 14px;
         }
 
         tbody tr:last-child td {
@@ -101,10 +85,6 @@
             color: #b8c5ff;
             text-decoration: none;
             font-weight: 600;
-        }
-
-        a:hover {
-            text-decoration: underline;
         }
 
         .empty {
@@ -120,21 +100,20 @@
 </head>
 <body>
 <main>
-    <header>
-        <h1>VisualVocab datasets</h1>
-        <p class="subtitle">
-            Uploaded YOLO datasets from Teach Mode.
-        </p>
-        <div class="status">
-            <span class="dot"></span>
-            Service online
-        </div>
-        <p style="margin-top:18px">
-            <a href="/visualvocab/training">
-                Open training manager →
-            </a>
-        </p>
-    </header>
+    <h1>VisualVocab datasets</h1>
+
+    <p class="subtitle">
+        Teach Mode uploads and imported YOLO datasets.
+    </p>
+
+    <div class="actions">
+        <a
+            class="button"
+            href="/visualvocab/import-yolo"
+        >
+            Import YOLO dataset
+        </a>
+    </div>
 
     <section class="panel">
         {% if records %}
@@ -142,11 +121,11 @@
             <thead>
             <tr>
                 <th>Received</th>
-                <th>Upload ID</th>
-                <th>Examples</th>
+                <th>Source</th>
+                <th>Name / ID</th>
+                <th>Images</th>
                 <th>Annotations</th>
-                <th>Categories</th>
-                <th>Model</th>
+                <th>Classes</th>
                 <th>Size</th>
                 <th>Files</th>
             </tr>
@@ -155,24 +134,33 @@
             {% for item in records %}
             <tr>
                 <td>{{ item.receivedAt }}</td>
+
                 <td>
-                    <code>
-                        {{ item.uploadId[:8] }}
-                    </code>
+                    {{ item.sourceType or "android" }}
                 </td>
-                <td>{{ item.exampleCount }}</td>
+
+                <td>
+                    {{ item.datasetName or item.uploadId[:8] }}
+                </td>
+
+                <td>
+                    {{ item.validation.imageCount }}
+                </td>
+
                 <td>
                     {{ item.validation.annotationCount }}
                 </td>
+
                 <td>
-                    {{ item.validation.categoryCount }}
+                    {{ item.validation.classes|join(", ") }}
                 </td>
-                <td>{{ item.modelVersion }}</td>
+
                 <td>
                     {{ "%.2f"|format(
                         item.datasetBytes / 1000000
                     ) }} MB
                 </td>
+
                 <td>
                     <a href="/visualvocab/datasets/{{ item.uploadId }}/download">
                         ZIP
