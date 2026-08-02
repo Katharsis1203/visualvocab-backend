@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>Import YOLO dataset</title>
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family:
+                Inter,
+                ui-sans-serif,
+                system-ui,
+                sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #08090c;
+            color: #f8f9fc;
+        }
+
+        main {
+            width: min(720px, calc(100% - 32px));
+            margin: 48px auto;
+        }
+
+        .card {
+            border: 1px solid #343a46;
+            background: #111318;
+            border-radius: 22px;
+            padding: 24px;
+        }
+
+        label {
+            display: block;
+            margin: 18px 0 8px;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid #454c5a;
+            background: #0b0d11;
+            color: white;
+        }
+
+        button {
+            margin-top: 22px;
+            border: 0;
+            padding: 12px 18px;
+            border-radius: 999px;
+            background: #6c83ff;
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        a {
+            color: #b8c5ff;
+        }
+
+        .muted {
+            color: #a8afbf;
+        }
+
+        .success {
+            margin: 18px 0;
+            padding: 14px;
+            border-radius: 14px;
+            background: #15301e;
+            color: #b8efc7;
+        }
+
+        code {
+            color: #bdc8ff;
+        }
+    </style>
+</head>
+<body>
+<main>
+    <p>
+        <a href="/">← Dataset dashboard</a>
+    </p>
+
+    <h1>Import YOLO dataset</h1>
+
+    <p class="muted">
+        Upload a standard Ultralytics or Roboflow
+        YOLO ZIP containing <code>data.yaml</code>,
+        image folders, and matching label folders.
+    </p>
+
+    {% if request.query_params.get("success") %}
+    <div class="success">
+        Dataset imported successfully.
+        Upload ID:
+        <code>
+            {{ request.query_params.get("success") }}
+        </code>
+    </div>
+    {% endif %}
+
+    <section class="card">
+        <form
+            method="post"
+            action="/visualvocab/import-yolo"
+            enctype="multipart/form-data"
+        >
+            <label for="datasetName">
+                Dataset name
+            </label>
+
+            <input
+                id="datasetName"
+                name="datasetName"
+                type="text"
+                placeholder="Example: soda cans"
+                required
+            >
+
+            <label for="dataset">
+                YOLO ZIP
+            </label>
+
+            <input
+                id="dataset"
+                name="dataset"
+                type="file"
+                accept=".zip,application/zip"
+                required
+            >
+
+            <button type="submit">
+                Import dataset
+            </button>
+        </form>
+    </section>
+
+    <p class="muted">
+        Supported layouts include:
+    </p>
+
+    <pre><code>train/images/
+train/labels/
+valid/images/
+valid/labels/
+data.yaml</code></pre>
+</main>
+</body>
+</html>
