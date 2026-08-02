@@ -64,7 +64,7 @@ templates = Jinja2Templates(
 
 app = FastAPI(
     title=APP_NAME,
-    version="3.0.0",
+    version="3.1.0",
 )
 
 
@@ -254,6 +254,113 @@ def parse_classes_json(
         item[1]
         for item in ordered_items
     ]
+
+
+def normalize_import_label_text(
+    label_text: str,
+    class_count: int,
+    file_name: str,
+) -> tuple[str, int, int]:
+    normalized_lines: list[str] = []
+    annotation_count = 0
+    polygon_conversion_count = 0
+
+    for line_number, raw_line in enumerate(
+        label_text.splitlines(),
+        start=1,
+    ):
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        parts = line.split()
+
+        try:
+            class_id = int(parts[0])
+        except (IndexError, ValueError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} "
+                    "has an invalid class ID."
+                ),
+            ) from exc
+
+        if class_id < 0 or class_id >= class_count:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} "
+                    "uses an unknown class ID."
+                ),
+            )
+
+        try:
+            values = [float(value) for value in parts[1:]]
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} "
+                    "contains non-numeric coordinates."
+                ),
+            ) from exc
+
+        if len(values) == 4:
+            center_x, center_y, width, height = values
+        elif len(values) >= 6 and len(values) % 2 == 0:
+            x_values = values[0::2]
+            y_values = values[1::2]
+            left = min(x_values)
+            right = max(x_values)
+            top = min(y_values)
+            bottom = max(y_values)
+            width = right - left
+            height = bottom - top
+            center_x = left + width / 2.0
+            center_y = top + height / 2.0
+            polygon_conversion_count += 1
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} must contain "
+                    "either four box values or an even number "
+                    "of polygon coordinates."
+                ),
+            )
+
+        coordinates = [center_x, center_y, width, height]
+
+        if any(value < 0.0 or value > 1.0 for value in coordinates):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} contains "
+                    "coordinates outside 0 to 1."
+                ),
+            )
+
+        if width <= 0.0 or height <= 0.0:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"{file_name} line {line_number} contains "
+                    "a non-positive box."
+                ),
+            )
+
+        normalized_lines.append(
+            f"{class_id} {center_x:.6f} {center_y:.6f} "
+            f"{width:.6f} {height:.6f}"
+        )
+        annotation_count += 1
+
+    normalized_text = "\n".join(normalized_lines)
+    if normalized_text:
+        normalized_text += "\n"
+
+    return normalized_text, annotation_count, polygon_conversion_count
 
 
 def validate_label_text(
@@ -810,6 +917,7 @@ def convert_standard_yolo_zip(
             )
 
             annotation_count = 0
+            polygon_conversion_count = 0
 
             with zipfile.ZipFile(
                 destination_zip,
@@ -840,18 +948,18 @@ def convert_standard_yolo_zip(
                         )
                     )
 
-                    annotation_count += (
-                        validate_label_text(
-                            label_text=
-                                label_text,
-                            class_count=
-                                len(
-                                    class_names
-                                ),
-                            file_name=
-                                label_entry,
-                        )
+                    (
+                        normalized_label_text,
+                        normalized_count,
+                        converted_polygon_count,
+                    ) = normalize_import_label_text(
+                        label_text=label_text,
+                        class_count=len(class_names),
+                        file_name=label_entry,
                     )
+
+                    annotation_count += normalized_count
+                    polygon_conversion_count += converted_polygon_count
 
                     destination.writestr(
                         (
@@ -870,10 +978,7 @@ def convert_standard_yolo_zip(
                             + unique_stem
                             + ".txt"
                         ),
-                        (
-                            label_text.rstrip()
-                            + "\n"
-                        ),
+                        normalized_label_text,
                     )
 
                 classes_payload = {
@@ -953,6 +1058,8 @@ def convert_standard_yolo_zip(
                     ),
                 "classes":
                     class_names,
+                "polygonAnnotationsConverted":
+                    polygon_conversion_count,
                 "importedFrom":
                     source_name,
             }
